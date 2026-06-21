@@ -1,0 +1,299 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Email API",
+    "description": "A powerful API for managing incoming emails with full CRUD operations",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/emails": {
+      "post": {
+        "tags": ["Emails"],
+        "summary": "Create a new email record",
+        "description": "Store a new incoming email in the database. Requires API key authentication.",
+        "operationId": "createEmail",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sender", "subject", "body"],
+                "properties": {
+                  "message_id": {
+                    "type": "string",
+                    "description": "Unique message identifier (optional, for deduplication)",
+                    "example": "msg_abc123xyz"
+                  },
+                  "sender": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the sender",
+                    "example": "user@example.com"
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Email subject line",
+                    "example": "Welcome to our service"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Email body content (plain text)",
+                    "example": "Hello! This is the email body content..."
+                  },
+                  "html_body": {
+                    "type": "string",
+                    "description": "Email body content (HTML format, optional)",
+                    "example": "<html><body><p>Hello!</p></body></html>"
+                  }
+                }
+              },
+              "examples": {
+                "basicEmail": {
+                  "summary": "Basic email example",
+                  "value": {
+                    "sender": "john@example.com",
+                    "subject": "Hello there",
+                    "body": "This is a test email"
+                  }
+                },
+                "fullEmail": {
+                  "summary": "Email with message ID",
+                  "value": {
+                    "message_id": "msg_12345",
+                    "sender": "jane@example.com",
+                    "subject": "Important notification",
+                    "body": "This is an important message that should not be duplicated"
+                  }
+                },
+                "htmlEmail": {
+                  "summary": "Email with HTML content",
+                  "value": {
+                    "sender": "noreply@example.com",
+                    "subject": "Welcome!",
+                    "body": "Welcome to our service",
+                    "html_body": "<html><body><h1>Welcome!</h1><p>Thank you for joining us.</p></body></html>"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Email successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "email": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "message_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "sender": {
+                          "type": "string",
+                          "example": "john@example.com"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "example": "Hello there"
+                        },
+                        "body": {
+                          "type": "string",
+                          "example": "This is the email body..."
+                        },
+                        "html_body": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "received_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-06-21T10:30:00Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Duplicate email detected (skipped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Duplicate email, skipped"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "sender, subject, and body are required"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Emails"],
+        "summary": "Retrieve emails",
+        "description": "Fetch a paginated list of stored emails. Results are sorted by most recent first.",
+        "operationId": "listEmails",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of emails to return (max 100)",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "example": 50
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of emails to skip for pagination",
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            },
+            "example": 0
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved emails",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "emails": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "example": 1
+                          },
+                          "message_id": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "msg_abc123"
+                          },
+                          "sender": {
+                            "type": "string",
+                            "example": "user@example.com"
+                          },
+                          "subject": {
+                            "type": "string",
+                            "example": "Welcome"
+                          },
+                          "body": {
+                            "type": "string",
+                            "example": "Email content here..."
+                          },
+                          "html_body": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": null
+                          },
+                          "received_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-06-21T10:30:00Z"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "API Key authentication. Use format: 'Bearer YOUR_API_KEY'"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Emails",
+      "description": "Email management endpoints"
+    }
+  ]
+}
